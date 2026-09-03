@@ -194,7 +194,7 @@ export async function exportCsv(req, res) {
     { key: 'assignedInterviewers', label: 'Assigned Interviewers' }
   ]);
   res.header('Content-Type', 'text/csv');
-  res.attachment('pipeline-snapshot.csv');
+  res.attachment('Applications-snapshot.csv');
   res.send(csv);
 }
 

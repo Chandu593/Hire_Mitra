@@ -199,7 +199,7 @@ function DashboardPage() {
       <section className="card"><h3>Applications by stage</h3>{data.byStage.map(s => <div className="barrow" key={s.stage}><span>{s.stage}</span><b>{s.count}</b></div>)}</section>
       <section className="card"><h3>Applications by job opening</h3>{data.byJobOpening.map(j => <div className="barrow" key={j.jobOpeningId}><span>{j.title}<small>{j.department}</small></span><b>{j.count}</b></div>)}</section>
     </div>
-    <section className="card"><h3>Applications received per week</h3><div className="chart-wrap"><div className="chart">{data.receivedPerWeek.map(w => <div className="chartbar" key={w.week} title={`${w.week}: ${w.count}`} style={{ height: `${24 + (w.count / max) * 140}px` }}><span>{w.count}</span><small>{  (w.week)}</small></div>)}</div></div></section>
+    <section className="card"><h3>Applications received per week</h3><div className="chart-wrap"><div className="chart">{data.receivedPerWeek.map(w => <div className="chartbar" key={w.week} title={`${w.week}: ${w.count}`} style={{ height: `${24 + (w.count / max) * 140}px` }}><span>{w.count}</span><small>{(w.week)}</small></div>)}</div></div></section>
   </Page>;
 }
 
@@ -228,7 +228,7 @@ function JobsPage() {
   }
 
   return <Page title="Job Openings" subtitle="Create roles, archive old openings, and keep applications attached." action={<Link className="button primary" to="/jobs/new">New Job</Link>}>
-    <label className="switch"><input type="checkbox" checked={includeArchived} onChange={e => setIncludeArchived(e.target.checked)} /><span /> Include archived</label>
+    <label className="switch"><input type="checkbox" className='hidden_check' checked={includeArchived} onChange={e => setIncludeArchived(e.target.checked)} /><span /> Include archived</label>
     {err && <div className="error">{err}</div>}
     {jobs.length === 0 ? <EmptyState title="No jobs found" text="Create your first job opening to start the pipeline." /> : <JobsTable jobs={jobs} onToggle={toggle} />}
   </Page>;
@@ -368,7 +368,7 @@ function ApplicationsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'HireMitra-snapshot.csv';
+    a.download = 'Applications-snapshot.csv';
     a.click();
     URL.revokeObjectURL(url);
   }

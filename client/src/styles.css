@@ -539,9 +539,10 @@ tbody tr:hover {
 .check input {
     width: auto;
     margin: 0;
+}
+.hidden_check{
     display: none
 }
-
 .switch span {
     width: 40px;
     height: 22px;
