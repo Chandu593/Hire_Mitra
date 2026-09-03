@@ -1,0 +1,15 @@
+import { Router } from 'express';
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { listJobs, createJob, getJob, updateJob, archiveJob, restoreJob } from '../controllers/jobs.controller.js';
+import { listJobApplications, createApplication } from '../controllers/applications.controller.js';
+const router = Router();
+router.use(requireAuth, requireRole('recruiter'));
+router.get('/', listJobs);
+router.post('/', createJob);
+router.get('/:id', getJob);
+router.patch('/:id', updateJob);
+router.patch('/:id/archive', archiveJob);
+router.patch('/:id/restore', restoreJob);
+router.get('/:jobId/applications', listJobApplications);
+router.post('/:jobId/applications', createApplication);
+export default router;
