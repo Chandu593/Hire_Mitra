@@ -1,0 +1,25 @@
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import authRoutes from './routes/auth.routes.js';
+import jobsRoutes from './routes/jobs.routes.js';
+import applicationsRoutes from './routes/applications.routes.js';
+import usersRoutes from './routes/users.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
+import alertsRoutes from './routes/alerts.routes.js';
+import { errorHandler, notFound } from './middleware/errorHandler.js';
+
+const app = express();
+app.use(cors({ origin: process.env.CLIENT_URL?.split(',') || '*', credentials: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(morgan('dev'));
+app.get('/api/health', (req, res) => res.json({ ok: true }));
+app.use('/api/auth', authRoutes);
+app.use('/api/jobs', jobsRoutes);
+app.use('/api/applications', applicationsRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/alerts', alertsRoutes);
+app.use(notFound);
+app.use(errorHandler);
+export default app;
