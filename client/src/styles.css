@@ -832,7 +832,7 @@ tbody tr:hover {
 
 .chartbar small {
     position: absolute;
-    bottom: -31px;
+    bottom: -50px;
     left: 50%;
     transform: translateX(-50%) rotate(-35deg);
     transform-origin: top left;
