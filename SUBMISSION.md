@@ -2,12 +2,12 @@
 
 ## Links
 
-- **GitHub repository:** <public repo URL>
-- **Live application:** <deployed URL>
+- **GitHub repository:** https://github.com/Chandu593/Hire_Mitra
+- **Live application:** https://hire-mitra-liart.vercel.app
 
 ## Notes for the reviewer
 
-This project uses free-tier hosting and MongoDB Atlas free tier. If the backend is deployed on a sleeping free service such as Render, the first request may take up to a minute. The database is seeded with demo users, job openings, applications across stages, interviewer assignments, feedback timeline events and stalled alerts.
+The backend is hosted on Render Free and may sleep when idle. The first request can take up to a minute. The app is seeded with recruiter and interviewer demo accounts, job openings, candidates across stages, feedback and stalled alerts.
 
 ## Demo credentials
 
@@ -24,7 +24,7 @@ This project uses free-tier hosting and MongoDB Atlas free tier. If the backend 
 | Frontend | React + Vite | Fast SPA development and straightforward Vercel deployment |
 | Backend | Node.js + Express | Clear REST API with server-side business rules and RBAC |
 | Database | MongoDB Atlas + Mongoose | Free hosted MongoDB and quick schema modelling |
-| Hosting | Vercel frontend, Render or Vercel backend | Free tiers and GitHub-based deployment |
+| Hosting | Vercel frontend, Render backend | Free tiers and GitHub-based deployment |
 
 ## Goal checklist
 
