@@ -1,4 +1,4 @@
-# Assignment 03 — Hiring Pipeline
+# Assignment — Hiring Pipeline
 
 ## The scenario
 
