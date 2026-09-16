@@ -59,8 +59,23 @@ export async function createApplication(req, res) {
   const job = await JobOpening.findById(req.params.jobId);
   if (!job) return res.status(404).json({ message: 'Job opening not found.' });
   const { candidateName, candidateEmail, source, notes } = req.body;
+  if (!candidateName || !candidateEmail || !source) {
+    return res.status(400).json({
+      message: 'Candidate name, email and source are required.'
+    });
+  }
+  const normalizedEmail = candidateEmail.toLowerCase().trim();
+  const duplicate = await Application.findOne({
+    jobOpening: job._id,
+    candidateEmail: normalizedEmail
+  });
+  if (duplicate) {
+    return res.status(409).json({
+      message: 'This candidate email already has an application for this job opening.'
+    });
+  }
   const now = new Date();
-  const app = await Application.create({ jobOpening: job._id, candidateName, candidateEmail, source, notes: notes || '', stage: 'Applied', appliedAt: now, stageChangedAt: now, createdBy: req.user._id });
+  const app = await Application.create({ jobOpening: job._id, candidateName, candidateEmail: normalizedEmail, source, notes: notes || '', stage: 'Applied', appliedAt: now, stageChangedAt: now, createdBy: req.user._id });
   await createTimelineEvent({ application: app._id, type: 'created', actor: req.user._id, newStage: 'Applied', message: 'Application created' });
   res.status(201).json(await Application.findById(app._id).populate('jobOpening').populate('assignedInterviewers', 'name email role'));
 }
@@ -73,10 +88,77 @@ export async function getApplication(req, res) {
 }
 
 export async function updateApplication(req, res) {
-  const allowed = (({ candidateName, candidateEmail, source, notes }) => ({ candidateName, candidateEmail, source, notes }))(req.body);
-  const app = await Application.findByIdAndUpdate(req.params.id, allowed, { new: true, runValidators: true });
-  if (!app) return res.status(404).json({ message: 'Application not found.' });
-  await createTimelineEvent({ application: app._id, type: 'updated', actor: req.user._id, message: 'Application details updated' });
+  const app = await Application.findById(req.params.id);
+
+  if (!app) {
+    return res.status(404).json({
+      message: 'Application not found.'
+    });
+  }
+
+  const allowed = Object.fromEntries(
+    Object.entries(
+      (({ candidateName, candidateEmail, source, notes }) => ({
+        candidateName,
+        candidateEmail,
+        source,
+        notes
+      }))(req.body)
+    ).filter(([, value]) => value !== undefined)
+  );
+
+  if (allowed.candidateName !== undefined) {
+    if (!allowed.candidateName.trim()) {
+      return res.status(400).json({
+        message: 'Candidate name cannot be blank.'
+      });
+    }
+
+    allowed.candidateName = allowed.candidateName.trim();
+  }
+
+  if (allowed.source !== undefined) {
+    if (!allowed.source.trim()) {
+      return res.status(400).json({
+        message: 'Source cannot be blank.'
+      });
+    }
+
+    allowed.source = allowed.source.trim();
+  }
+
+  if (allowed.candidateEmail !== undefined) {
+    if (!allowed.candidateEmail.trim()) {
+      return res.status(400).json({
+        message: 'Candidate email cannot be blank.'
+      });
+    }
+
+    allowed.candidateEmail = allowed.candidateEmail.toLowerCase().trim();
+
+    const duplicate = await Application.findOne({
+      _id: { $ne: app._id },
+      jobOpening: app.jobOpening,
+      candidateEmail: allowed.candidateEmail
+    });
+
+    if (duplicate) {
+      return res.status(409).json({
+        message: 'Another application for this job opening already uses this candidate email.'
+      });
+    }
+  }
+
+  Object.assign(app, allowed);
+  await app.save();
+
+  await createTimelineEvent({
+    application: app._id,
+    type: 'updated',
+    actor: req.user._id,
+    message: 'Application details updated'
+  });
+
   res.json(await populateApp(Application.findById(app._id)));
 }
 

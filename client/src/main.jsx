@@ -399,6 +399,7 @@ function MyApplicationsPage() {
 function ApplicationDetailPage() {
   const { applicationId } = useParams();
   const { user } = useAuth();
+
   const [app, setApp] = useState(null);
   const [timeline, setTimeline] = useState([]);
   const [interviewers, setInterviewers] = useState([]);
@@ -406,35 +407,271 @@ function ApplicationDetailPage() {
   const [feedback, setFeedback] = useState('');
   const [err, setErr] = useState('');
 
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    candidateName: '',
+    candidateEmail: '',
+    source: 'LinkedIn',
+    notes: ''
+  });
+
+  function applyLoadedApplication(loadedApp, loadedTimeline) {
+    setApp(loadedApp);
+    setPanel(loadedApp.assignedInterviewers?.map(i => i._id) || []);
+    setTimeline(loadedTimeline);
+
+    setEditForm({
+      candidateName: loadedApp.candidateName || '',
+      candidateEmail: loadedApp.candidateEmail || '',
+      source: loadedApp.source || 'LinkedIn',
+      notes: loadedApp.notes || ''
+    });
+  }
+
   function load() {
     setErr('');
-    return Promise.all([applicationsApi.get(applicationId), applicationsApi.timeline(applicationId)])
-      .then(([a, t]) => { setApp(a); setPanel(a.assignedInterviewers?.map(i => i._id) || []); setTimeline(t); })
+
+    return Promise.all([
+      applicationsApi.get(applicationId),
+      applicationsApi.timeline(applicationId)
+    ])
+      .then(([loadedApp, loadedTimeline]) => {
+        applyLoadedApplication(loadedApp, loadedTimeline);
+      })
       .catch(e => setErr(e.message));
   }
 
   useEffect(() => {
     let active = true;
     setErr('');
-    Promise.all([applicationsApi.get(applicationId), applicationsApi.timeline(applicationId)])
-      .then(([a, t]) => { if (active) { setApp(a); setPanel(a.assignedInterviewers?.map(i => i._id) || []); setTimeline(t); } })
-      .catch(e => { if (active) setErr(e.message); });
-    if (user?.role === 'recruiter') usersApi.interviewers().then(r => { if (active) setInterviewers(r); }).catch(() => { });
-    return () => { active = false; };
+
+    Promise.all([
+      applicationsApi.get(applicationId),
+      applicationsApi.timeline(applicationId)
+    ])
+      .then(([loadedApp, loadedTimeline]) => {
+        if (active) {
+          applyLoadedApplication(loadedApp, loadedTimeline);
+        }
+      })
+      .catch(e => {
+        if (active) setErr(e.message);
+      });
+
+    if (user?.role === 'recruiter') {
+      usersApi.interviewers()
+        .then(result => {
+          if (active) setInterviewers(result);
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      active = false;
+    };
   }, [applicationId, user?.role]);
 
-  async function act(fn) { try { await fn(); await load(); } catch (e) { setErr(e.message); } }
+  async function act(fn) {
+    try {
+      setErr('');
+      await fn();
+      await load();
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
 
-  if (!app) return <Page title="Application">{err ? <EmptyState title="Application not available" text={err} /> : <div className="screen-loader"><div className="spinner" /> Loading application...</div>}</Page>;
+  async function saveApplicationDetails(e) {
+    e.preventDefault();
 
-  return <Page title={app.candidateName} subtitle={`${app.jobOpening?.title || ''} · ${app.candidateEmail}`} action={<BackButton />}>
-    <div className="grid2">
-      <section className="card profile-card"><span className={`pill stage-${app.stage}`}>{app.stage}</span><p><b>Source:</b> {app.source}</p><p><b>Applied:</b> {fmt(app.appliedAt)}</p><p><b>Notes:</b> {app.notes || '—'}</p>{err && <div className="error">{err}</div>}{user.role === 'recruiter' && <div className="actions"><button onClick={() => act(() => applicationsApi.advance(app._id))}>Advance</button><button onClick={() => act(() => applicationsApi.reject(app._id))}>Reject</button>{app.stage === 'Rejected' && <button onClick={() => act(() => applicationsApi.reinstate(app._id))}>Reinstate</button>}</div>}</section>
-      {user.role === 'recruiter' && <section className="card"><h3>Interview panel</h3>{interviewers.map(i => <label className="check" key={i._id}><input type="checkbox" checked={panel.includes(i._id)} onChange={e => setPanel(e.target.checked ? [...panel, i._id] : panel.filter(id => id !== i._id))} /> {i.name} <span className="muted">({i.email})</span></label>)}<button className="primary" onClick={() => act(() => applicationsApi.setInterviewers(app._id, panel))}>Save panel</button></section>}
-    </div>
-    {user.role === 'interviewer' && <section className="card"><h3>Leave feedback</h3><textarea value={feedback} onChange={e => setFeedback(e.target.value)} placeholder="Write feedback for this assigned candidate..." /><button className="primary" onClick={() => act(async () => { await applicationsApi.feedback(app._id, feedback); setFeedback(''); })}>Submit feedback</button></section>}
-    <section className="card"><h3>Immutable timeline</h3>{timeline.map(ev => <div className="timeline" key={ev._id}><b>{fmt(ev.createdAt)}</b> — {ev.message} <span className="muted">by {ev.actor?.name}</span>{ev.feedbackText && <blockquote>{ev.feedbackText}</blockquote>}</div>)}</section>
-  </Page>;
+    try {
+      setErr('');
+      await applicationsApi.update(app._id, editForm);
+      setEditing(false);
+      await load();
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+
+  if (!app) {
+    return (
+      <Page title="Application">
+        {err ? (
+          <EmptyState title="Application not available" text={err} />
+        ) : (
+          <div className="screen-loader">
+            <div className="spinner" /> Loading application...
+          </div>
+        )}
+      </Page>
+    );
+  }
+
+  return (
+    <Page
+      title={app.candidateName}
+      subtitle={`${app.jobOpening?.title || ''} · ${app.candidateEmail}`}
+      action={<BackButton />}
+    >
+      <div className="grid2">
+        <section className="card profile-card">
+          <span className={`pill stage-${app.stage}`}>{app.stage}</span>
+
+          <p><b>Email:</b> {app.candidateEmail}</p>
+          <p><b>Source:</b> {app.source}</p>
+          <p><b>Applied:</b> {fmt(app.appliedAt)}</p>
+          <p><b>Notes:</b> {app.notes || '—'}</p>
+
+          {err && <div className="error">{err}</div>}
+
+          {user.role === 'recruiter' && (
+            <div className="actions">
+              <button onClick={() => setEditing(!editing)}>
+                {editing ? 'Cancel edit' : 'Edit details'}
+              </button>
+
+              <button onClick={() => act(() => applicationsApi.advance(app._id))}>
+                Advance
+              </button>
+
+              <button onClick={() => act(() => applicationsApi.reject(app._id))}>
+                Reject
+              </button>
+
+              {app.stage === 'Rejected' && (
+                <button onClick={() => act(() => applicationsApi.reinstate(app._id))}>
+                  Reinstate
+                </button>
+              )}
+            </div>
+          )}
+        </section>
+
+        {user.role === 'recruiter' && (
+          <section className="card">
+            <h3>Interview panel</h3>
+
+            {interviewers.map(i => (
+              <label className="check" key={i._id}>
+                <input
+                  type="checkbox"
+                  checked={panel.includes(i._id)}
+                  onChange={e =>
+                    setPanel(
+                      e.target.checked
+                        ? [...panel, i._id]
+                        : panel.filter(id => id !== i._id)
+                    )
+                  }
+                />
+                {i.name} <span className="muted">({i.email})</span>
+              </label>
+            ))}
+
+            <button
+              className="primary"
+              onClick={() => act(() => applicationsApi.setInterviewers(app._id, panel))}
+            >
+              Save panel
+            </button>
+          </section>
+        )}
+      </div>
+
+      {user.role === 'recruiter' && editing && (
+        <section className="card form slide">
+          <h3>Edit application details</h3>
+
+          <form onSubmit={saveApplicationDetails}>
+            <label>
+              Candidate name
+              <input
+                value={editForm.candidateName}
+                onChange={e =>
+                  setEditForm({ ...editForm, candidateName: e.target.value })
+                }
+              />
+            </label>
+
+            <label>
+              Candidate email
+              <input
+                autoComplete="email"
+                value={editForm.candidateEmail}
+                onChange={e =>
+                  setEditForm({ ...editForm, candidateEmail: e.target.value })
+                }
+              />
+            </label>
+
+            <label>
+              Source
+              <select
+                value={editForm.source}
+                onChange={e =>
+                  setEditForm({ ...editForm, source: e.target.value })
+                }
+              >
+                {sources.map(source => (
+                  <option key={source}>{source}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Notes
+              <textarea
+                value={editForm.notes}
+                onChange={e =>
+                  setEditForm({ ...editForm, notes: e.target.value })
+                }
+              />
+            </label>
+
+            <button className="primary">Save application details</button>
+          </form>
+        </section>
+      )}
+
+      {user.role === 'interviewer' && (
+        <section className="card">
+          <h3>Leave feedback</h3>
+
+          <textarea
+            value={feedback}
+            onChange={e => setFeedback(e.target.value)}
+            placeholder="Write feedback for this assigned candidate..."
+          />
+
+          <button
+            className="primary"
+            onClick={() =>
+              act(async () => {
+                await applicationsApi.feedback(app._id, feedback);
+                setFeedback('');
+              })
+            }
+          >
+            Submit feedback
+          </button>
+        </section>
+      )}
+
+      <section className="card">
+        <h3>Immutable timeline</h3>
+
+        {timeline.map(ev => (
+          <div className="timeline" key={ev._id}>
+            <b>{fmt(ev.createdAt)}</b> — {ev.message}{' '}
+            <span className="muted">by {ev.actor?.name}</span>
+
+            {ev.feedbackText && <blockquote>{ev.feedbackText}</blockquote>}
+          </div>
+        ))}
+      </section>
+    </Page>
+  );
 }
 
 function AlertsPage() {

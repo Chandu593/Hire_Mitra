@@ -6,7 +6,7 @@ export const ALL_STAGES = [...ACTIVE_STAGES, 'Rejected'];
 const applicationSchema = new mongoose.Schema({
   jobOpening: { type: mongoose.Schema.Types.ObjectId, ref: 'JobOpening', required: true, index: true },
   candidateName: { type: String, required: true, trim: true, index: true },
-  candidateEmail: { type: String, required: true, lowercase: true, trim: true, index: true },
+  candidateEmail: { type: String, required: true, lowercase: true, trim: true, index: true, unique: true },
   source: { type: String, required: true, trim: true, index: true },
   notes: { type: String, default: '' },
   stage: { type: String, enum: ALL_STAGES, default: 'Applied', index: true },
@@ -19,5 +19,9 @@ const applicationSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 applicationSchema.index({ candidateName: 'text', candidateEmail: 'text' });
+applicationSchema.index(
+  { jobOpening: 1, candidateEmail: 1 },
+  { unique: true }
+);
 
 export default mongoose.model('Application', applicationSchema);
