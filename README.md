@@ -1,190 +1,143 @@
-# Assignment — Hiring Pipeline
+# Hire Mitra
 
-## The scenario
+Hire Mitra is an applicant tracking system for recruiting teams managing multiple job openings. It replaces scattered spreadsheets and inboxes with a shared hiring pipeline, candidate histories, interviewer assignments and alerts for applications that need attention.
 
-Picture a company hiring across several open roles at once — engineering, sales, support — with a
-small recruiting team coordinating a growing list of candidates through interviews. Right now,
-tracking who applied to what and which stage they have reached lives across a shared spreadsheet, a
-handful of personal inboxes, and whatever an interviewer remembers to mention afterward.
+- **Live application:** https://hire-mitra-liart.vercel.app
 
-The result is predictable. A candidate promised feedback within a week hears nothing for a month
-because nobody noticed their application had sat at the same stage the whole time. Two interviewers
-each assume the other is following up with the same person, and nobody does. When someone asks how
-many people are currently being interviewed for the sales role, the honest answer is to go count by
-hand across three different sheets. A candidate who was rejected months ago and reapplies has no
-history anyone can find.
+> The backend runs on Render's free tier and may sleep when idle. The first request after inactivity may take a minute or longer. The demo is seeded with openings, candidates, interviewer assignments, feedback and stalled applications.
 
-They want one shared pipeline: recruiters open positions, move candidates through a defined set of
-stages, and see the whole funnel at a glance, while interviewers see just the candidates assigned to
-them and leave feedback without needing access to the rest of the pipeline. Anyone should be able to
-answer "which candidates are stuck" or "how many are we talking to right now" without tallying
-spreadsheets by hand. That is the tool you are building.
+## Demo accounts
 
-## What it must do
+| Role | Email | Password |
+| --- | --- | --- |
+| Recruiter | recruiter@example.com | Password123! |
+| Interviewer | interviewer@example.com | Password123! |
+| Interviewer | interviewer2@example.com | Password123! |
 
-Everything below is required. Several of the ten spell out exact rules — what happens on an illegal
-move, what a bulk action must report back, when a dismissed alert is allowed to reappear — and those
-specifics are the actual ask, not just the bold headline in front of them.
+## What the application does
 
-1. **Accounts and roles.** People sign in with an email and password, and there are at least two
-roles — a recruiter role and an interviewer role. Recruiters can open and close job openings, add
-and edit applications, move candidates through the pipeline, and assign interviewers. Interviewers
-can only see applications they are assigned to and leave feedback on them — they cannot change a
-candidate's stage or see other openings' pipelines. The difference must be enforced on the server,
-not just hidden in the interface.
+### Accounts and access
 
-2. **Job openings.** Recruiters create job openings with a title, a department, a description and a
-status, and can edit them later. Openings can be archived and restored. Archiving hides an opening
-from the default views without destroying its applications.
+Users sign in with an email address and password. Recruiters manage openings and applications; interviewers see only applications assigned to them and can submit feedback. Authorization is enforced by the Express API using authentication middleware, role checks and application-level assignment checks, not just by hiding interface controls. Candidates are application records, not login accounts.
 
-3. **Applications inside job openings.** Every application belongs to exactly one job opening and
-carries a candidate name, an email, a source, and any notes. Applications can be created and edited.
-Opening a job opening shows its applications.
+### Job openings and applications
 
-4. **A pipeline with rules.** An application advances *Applied → Screening → Interview → Offer →
-Hired*, one stage at a time. It can be marked *Rejected* from any stage, immediately halting its
-progress. A rejected application is never deleted — it can be reinstated back to the exact stage it
-was rejected from, not reset to Applied. Any attempt to skip a stage forward, such as jumping from
-Screening straight to Offer, must be rejected by the server with a message explaining why.
+Recruiters can create and edit job openings with a title, department, description and status. Openings can be archived and restored; archiving does not delete their applications. Each application belongs to one opening and stores a candidate's name, email, source and notes. Opening a job shows its applications.
 
-5. **Interview panel.** Any number of interviewers can be assigned to an application, and an
-interviewer can be assigned to any number of applications across every opening. Only users with the
-interviewer role may be assigned. Every interviewer can see one list of every application they are
-on the panel for.
+The API supports creating and editing applications. Duplicate candidate emails are prevented within the same opening; the same person can apply to a different opening. The application-detail editing interface depends on whether the optional UI update has been applied to your copy.
 
-6. **Finding candidates.** One list shows applications across every opening the viewer can see, with
-a text search over candidate name and email, filters for job opening, stage and source, sorting by
-applied date, stage or last update, and pagination showing the total number of matches. All of this
-must happen on the server — do not load every application into the browser and filter there.
+### Hiring pipeline
 
-7. **Acting on many candidates at once.** Select several applications from the list and bulk-advance
-them to the next stage, or bulk-reject them, in one action. Because some selected applications will
-not be eligible for the move, the result must report per candidate what succeeded and what was
-refused and why, not just fail the whole batch. Separately, export a snapshot of the pipeline —
-every open application and its current stage — as a CSV file.
+Applications move through the following stages, one step at a time:
 
-8. **A dashboard.** A landing view shows headline numbers — open positions, active applications,
-interviews scheduled this week, hires this month. It also breaks applications down by job opening
-and by stage, and charts applications received per week over the last quarter.
+**Applied → Screening → Interview → Offer → Hired**
 
-9. **History you cannot rewrite.** Every application has a timeline showing when it was created,
-every stage change with the old and new stage and who made it, every rejection and reinstatement,
-and any feedback interviewers have left. Feedback is part of this timeline. Nothing in it can be
-edited or deleted after the fact, including by recruiters.
+Recruiters can reject an application from any stage. Rejected applications remain in the system and can be reinstated to the exact stage they were rejected from. The server validates transitions and rejects invalid stage jumps.
 
-10. **Stalled-application alerts.** Any application that has sat in the same stage for more than ten
-days appears in an alerts area, with a count badge visible in the navigation. A recruiter can
-dismiss an alert for a specific application. If that application later advances and then stalls in
-its new stage for the same length of time, the alert returns.
+### Interview panels and feedback
 
-## Stretch ideas (optional)
+Recruiters can assign multiple interviewers to an application, and an interviewer can be assigned to applications across multiple openings. Only users with the interviewer role can be assigned. Each interviewer has a list of assigned applications and can view their details and add feedback to their timelines.
 
-None of these are required, and none substitute for a goal above. If you finish all ten with time
-left over, pick whichever of these sounds most useful and build it:
+### Search, filters and bulk actions
 
-- A public careers page listing open positions.
-- Structured interview scorecards per stage.
-- Self-service scheduling links for interviews.
-- A candidate-facing status portal.
-- Resume tagging and search by skill.
-- Offer letter generation.
-- Source-of-hire reporting.
-- An email digest of stalled candidates.
-- Referral tracking.
+A cross-opening application list supports server-side search by candidate name or email, filtering by opening, stage and source, sorting, and pagination with a total match count. Recruiters can select applications to bulk-advance or bulk-reject them. Bulk results report success or refusal for each candidate, including the reason for a refusal. Recruiters can also export a CSV snapshot of the pipeline.
 
+### Dashboard and alerts
 
----
+The recruiter dashboard provides headline numbers for openings, applications, interviews and hires; breakdowns by opening and stage; and a weekly applications chart for the last quarter.
 
-## What we are assessing
+**Metric limitation:** “Interviews this week” counts applications entering the Interview stage that week. It is not a count of scheduled interviews; there is no interview scheduling module.
 
-A working application is table stakes. Almost every serious candidate will produce something that runs, has a login, and roughly does what was asked. That's the floor, not the differentiator.
+Applications that remain in a stage for more than ten days appear in the stalled-alert area, with a navigation badge. Recruiters can dismiss an alert; if the application moves to a new stage and subsequently stalls, it can appear again.
 
-What actually separates submissions is the record of thinking behind the app: the decisions you made and why, the trade-offs you weighed, what you built first and what you deliberately left out, and whether you can explain any part of your own system when asked. We are hiring for judgement. The app is the evidence for that judgement, not the deliverable in itself.
+### Application timeline
 
-We also read the code itself for structure and readability, which counts for a small share of the overall score.
+Each application has a history of its creation, stage changes, rejection and reinstatement, interviewer feedback and other recorded activity. Timeline events include the actor and time where applicable. The API exposes no timeline edit or delete routes, so the history is append-only through the application.
 
-## Time budget
+## Technology stack
 
-Budget about 12 hours total, spent roughly 2 hours a day across a week.
+| Layer | Technology |
+| --- | --- |
+| Frontend | React, Vite, React Router and Lucide icons |
+| Backend | Node.js, Express and Mongoose |
+| Database | MongoDB Atlas |
+| Authentication | JWT and bcryptjs |
+| Hosting | Vercel frontend and Render backend, using free tiers |
 
-This is not a race. We are not timing you against other candidates, and submitting early scores nothing extra. Twelve hours is a size guide so you know how much to attempt — pace yourself, stop when you're tired, and spend some of that time thinking and documenting, not only typing code.
+The React client sends requests to the Express API. The API authenticates users, enforces role and pipeline rules, and reads and writes data in MongoDB.
 
-## Pick any stack you like
+## Run locally
 
-Use any language, any framework, any UI library, any ORM, and any database access approach you want. We have no house stack, and no stack scores better than another — this round is not a test of whether you know particular tools.
+### Prerequisites
 
-Use whatever you are fastest and most confident in. Time spent learning something new to impress us is time not spent on the ten goals above, and it will show.
+- A recent Node.js and npm installation compatible with the versions in the project lockfiles.
+- A MongoDB database, local or hosted on MongoDB Atlas.
 
-## Using AI is allowed and encouraged
+### 1. Clone and install
 
-Use AI tools however you want — to scaffold code, debug a stuck problem, write tests, draft documentation, or anything else that helps you move faster. A few things to know about how we treat it:
+```bash
+git clone https://github.com/Chandu593/Hire_Mitra.git
+cd Hire_Mitra
+npm run install:all
+```
 
-- We do not penalise AI use, and we make no attempt to detect it.
-- We care about whether you understood, directed and verified the output — not about who or what produced the first draft of it.
-- `docs/ai-prompts.md` must contain the prompts you actually used, including the ones that produced bad output and what you changed afterwards. If you used no AI at all, say so here and describe how you worked instead — that is assessed the same way.
-- Submitting generated code you cannot explain is the single most common way candidates fail this round.
+### 2. Configure environment variables
 
-You are accountable for everything in your submission. If a reviewer points at a piece of code and asks why it's there, or why it works the way it does, "the AI wrote it" is not an answer.
+Create `server/.env`:
 
-## Use git properly
+```env
+MONGODB_URI=your-mongodb-connection-string
+JWT_SECRET=replace-with-a-long-random-secret
+CLIENT_URL=http://localhost:5173
+PORT=5000
+```
 
-Publish to a public GitHub repository, and commit incrementally as the work actually happens — after each meaningful step, not in one pass at the end.
+Create `client/.env`:
 
-A repository whose entire history is a single "initial commit" containing a finished app scores zero on git history, and it colours how we read everything else in your submission, however good the app itself is. Your history is how we see the order you built in, where you got stuck, and how the design changed along the way. If it isn't there, we can't assess it, and we won't assume the best.
+```env
+VITE_API_URL=http://localhost:5000/api
+```
 
-## What you must commit
+Keep real connection strings and secrets out of Git. Use your own values rather than committing the examples above.
 
-Alongside your code, commit these five files under `docs/`. Your zip includes a stub for each with the questions it needs to answer — fill them in as you go, not from memory at the end.
+### 3. Seed demo data
 
-| File | What it must answer |
-|------|----------------------|
-| `docs/architecture.md` | What the moving pieces are, how they talk to each other, where each one runs, the request path for one representative user action end to end, and what you decided not to build. |
-| `docs/schema.md` | Every table's columns and types, which relationships are one-to-many versus many-to-many, which constraints live in the database versus the application, what you deliberately denormalised, and what would break first at 100x the data. |
-| `docs/plan.md` | How you split the work into sessions, what order you built in and why, what you estimated versus what it actually took, and what you cut when you ran short. |
-| `docs/decisions.md` | At least five real decisions — what you chose, what you rejected, and why — including at least one you later reversed. |
-| `docs/ai-prompts.md` | The prompts you actually used, in order, grouped by what you were trying to do, including at least one that produced something wrong and what you did about it. |
+```bash
+npm run seed
+```
 
-## Host it for free
+**Warning:** The seed script resets existing application data in the database it connects to. Use it only with a database you are happy to reset; check `MONGODB_URI` first.
 
-Deploy the whole thing somewhere reachable by URL, using free tiers only.
+### 4. Start the app
 
-One combination that works, if you would rather not decide:
+Run these commands in separate terminals from the project root:
 
-- **Database** — a managed service such as Supabase.
-- **Server-side code** — Render.
-- **Browser-side code** — Vercel.
+```bash
+npm run dev:server
+```
 
-Deploy in that order: create the database first, give the server its connection details as environment variables, then point the browser-side part at the server's public URL.
+```bash
+npm run dev:client
+```
 
-This is one option, not a requirement. Any free host is equally acceptable — everything on a single provider, one virtual machine, a container platform, a static host with serverless functions. The choice earns and loses nothing.
+Open the local URL printed by Vite, normally http://localhost:5173. To build the frontend for production:
 
-Requirements:
+```bash
+npm run build --prefix client
+```
 
-- A working live URL.
-- Seeded with enough demo data to show the system doing something, not an empty shell.
-- Demo credentials for every role recorded in `SUBMISSION.md`.
-- Connection strings, keys and passwords kept in environment variables, never in the repository.
-- Free tiers often sleep when idle and can take a minute or more to wake. Note it in `SUBMISSION.md` if yours does, so a slow first load is not read as a broken deployment.
-- If you cannot get it hosted, submit anyway and record in `SUBMISSION.md` what you tried and where it broke.
+## Project structure
 
-## How to submit
+```text
+client/                 React frontend
+server/                 Express API, models, routes and seed script
+docs/                   Architecture, schema, planning, decisions and AI-use notes
+START_HERE.md           Additional setup instructions
+SUBMISSION.md           Reviewer submission details
+```
 
-Send us:
+## Known limitations and future work
 
-- The URL of your public GitHub repository.
-- The URL of your live, deployed application.
-- Your completed `SUBMISSION.md`, committed to the repository.
-
-That's the whole submission. Nothing else to prepare, no separate form.
-
-## What happens next
-
-If your submission clears the bar, we'll set up a short call. We will ask about specific decisions we can see in your repository and its history — why you modelled something a particular way, what a certain commit was fixing, what you'd change if you kept going.
-
-We're telling you this now because it should change how carefully you document as you go. Write `docs/decisions.md` for a version of yourself who has to explain it three weeks from now.
-
-## Scope
-
-The 10 goals stated in this brief are the cutoff. Meet all 10, solidly, and you have a complete submission.
-
-Stretch ideas are optional. They exist for candidates who finish the 10 with time left and want to keep building — they are never required, and they do not make up for a goal you didn't hit. Doing 8 goals well beats doing 10 goals badly. If time is short, finish fewer goals properly rather than leaving all ten half-done.
+- Interview scheduling is not implemented; the dashboard uses the Interview-stage approximation described above.
+- There is no public applicant portal or public registration flow for recruiters and interviewers. Demo accounts are provided by the seed script.
+- Possible future work includes interview scheduling, structured scorecards, dashboard rollups and a public careers page.
